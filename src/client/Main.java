@@ -31,7 +31,6 @@ public class Main {
             @Override
             public void run() {
                 synchronized (connector) {
-                    System.out.println("ffffff");
                     connector.send("ffffff");
                 }
             }

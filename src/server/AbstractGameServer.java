@@ -1,21 +1,22 @@
 package server;
 
-import server.interfaces.SocketEvent;
+import server.interfaces.ClientManager;
+import server.interfaces.GameServer;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 
-abstract public class AbstractGameServer implements SocketEvent {
+abstract public class AbstractGameServer implements GameServer {
     private int port;
     private boolean isStopped = true;
-    private ClientManager clientManager;
+    private ClientManager myClientManager;
     private ServerSocket serverSocket;
 
     public AbstractGameServer(int port) throws IOException {
         this.port = port;
-        this.clientManager = new ClientManager(this);
+        this.myClientManager = new MyClientManager(this);
         this.serverSocket = new ServerSocket(port);
     }
 
@@ -33,7 +34,7 @@ abstract public class AbstractGameServer implements SocketEvent {
         while (!isStopped) {
             try {
                 Socket clientSocket = serverSocket.accept();
-                String clientId = clientManager.handleClient(clientSocket);
+                String clientId = myClientManager.handleClient(clientSocket);
             } catch(SocketException ex) {
                 System.out.println(ex.getMessage());
             }
@@ -44,7 +45,7 @@ abstract public class AbstractGameServer implements SocketEvent {
         try {
             isStopped = true;
             serverSocket.close();
-            clientManager.closeConnections();
+            myClientManager.closeAllConnections();
         } catch (IOException e) {
             e.printStackTrace();
         }

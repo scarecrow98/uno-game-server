@@ -1,27 +1,30 @@
 package server;
 
-import server.interfaces.SocketEvent;
+import server.interfaces.ClientManager;
+import server.interfaces.GameClient;
+import server.interfaces.SocketServerEvent;
 
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.UUID;
 
 
-public class ClientManager {
-    private HashMap<String, GameClient> clients;
+public class MyClientManager implements ClientManager {
+    private HashMap<String, MyGameClient> clients;
     private AbstractGameServer server;
 
-    public ClientManager(AbstractGameServer server) {
+    public MyClientManager(AbstractGameServer server) {
         this.server = server;
         this.clients = new HashMap<>();
     }
 
+    @Override
     public String handleClient(Socket socket) {
         String uid = UUID.randomUUID().toString();
-        GameClient client = new GameClient(uid, socket);
+        MyGameClient client = new MyGameClient(uid, socket);
         clients.put(uid, client);
 
-        client.listen(new SocketEvent() {
+        client.listen(new SocketServerEvent() {
             @Override
             public void onConnect(GameClient client) {
                 server.onConnect(client);
@@ -37,12 +40,23 @@ public class ClientManager {
                 clients.remove(clientId);
                 server.onDisconnect(clientId, reason);
             }
+
+            @Override
+            public void onError(GameClient client, String error) {
+
+            }
         });
 
         return uid;
     }
 
-    public void closeConnections() {
+    @Override
+    public void closeAllConnections() {
         clients.forEach((clientId, client) -> client.close("Server is shutting down"));
+    }
+
+    @Override
+    public GameClient getClientById(String id) {
+        return (clients.containsKey(id) ? clients.get(id) : null);
     }
 }

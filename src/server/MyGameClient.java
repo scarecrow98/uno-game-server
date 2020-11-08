@@ -1,55 +1,61 @@
 package server;
 
-import server.interfaces.SocketEvent;
+import server.interfaces.GameClient;
+import server.interfaces.SocketServerEvent;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 
-public class GameClient implements Runnable {
+public class MyGameClient implements GameClient {
     private Socket socket;
     private String clientId;
     private Thread currentThread;
     private PrintWriter outputStream;
     private BufferedReader inputStream;
-    private SocketEvent socketEvent;
-    private boolean isClosed = true;
+    private SocketServerEvent socketServerEvent;
 
-    public GameClient(String clientId, Socket socket) {
+    public MyGameClient(String clientId, Socket socket) {
         this.socket = socket;
         this.clientId = clientId;
         try {
             this.socket.setKeepAlive(true);
+        } catch(SocketException ex) { }
+    }
+
+    @Override
+    public void listen(SocketServerEvent socketServerEvent) {
+        this.socketServerEvent = socketServerEvent;
+        this.socketServerEvent.onConnect(this);
+
+        try {
             this.outputStream = new PrintWriter(socket.getOutputStream(), true);
             this.inputStream = new BufferedReader(
                     new InputStreamReader(socket.getInputStream())
             );
-            isClosed = false;
         } catch(Exception ex) {
-            close("Could not create data streams");
+            socketServerEvent.onError(this, "Could open data streams");
+            close("Error occured");
         }
-    }
 
-    public void listen(SocketEvent socketEvent) {
-        this.socketEvent = socketEvent;
-        this.socketEvent.onConnect(this);
         currentThread = new Thread(this);
-        System.out.println("Client handling started on thread " + currentThread.getId());
         currentThread.start();
     }
 
+    @Override
     public void close(String reason) {
-        isClosed = true;
         try {
             this.currentThread.interrupt();
             this.inputStream.close();
             this.outputStream.close();
             this.socket.close();
-            socketEvent.onDisconnect(clientId, reason);
+            socketServerEvent.onDisconnect(clientId, reason);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    @Override
     public void send(String message) {
         outputStream.println(message);
     }
@@ -59,11 +65,10 @@ public class GameClient implements Runnable {
         try {
             String line;
             while ((line = inputStream.readLine()) != null) {
-                System.out.print(line);
-                socketEvent.onMessage(this, line);
+                socketServerEvent.onMessage(this, line);
             }
         } catch(Exception ex) {
-            System.out.println("dffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+            socketServerEvent.onError(this, "Error while reading data from the socket");
         } finally {
             close("Socket disconnected on purpose");
         }

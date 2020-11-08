@@ -1,5 +1,7 @@
 package server;
 
+import server.interfaces.GameClient;
+
 import java.io.IOException;
 
 public class MyGameServer extends AbstractGameServer {
@@ -21,5 +23,10 @@ public class MyGameServer extends AbstractGameServer {
     @Override
     public void onDisconnect(String clientId, String reason) {
         System.out.println("[Server]: client " + clientId + " disconnect; reason:" + reason);
+    }
+
+    @Override
+    public void onError(GameClient client, String error) {
+        System.out.println("[Server]: error occured with client" + client.getClientId() + ": " + error);
     }
 }
